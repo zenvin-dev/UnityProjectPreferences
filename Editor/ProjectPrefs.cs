@@ -2,9 +2,19 @@ using System.IO;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using System;
 
 namespace Zenvin.ProjectPreferences {
 	public static class ProjectPrefs {
+
+		[Flags]
+		public enum KeyTypes : byte {
+			None = 0,
+			Bool = 1,
+			Int = 2,
+			String = 4,
+			Float = 8,
+		}
 
 		private static bool loaded = false;
 		private static readonly Dictionary<string, bool> boolValues = new Dictionary<string, bool> ();
@@ -37,7 +47,10 @@ namespace Zenvin.ProjectPreferences {
 					writer.Write (stringValues.Count);
 					foreach (var val in stringValues) {
 						writer.Write (val.Key);
-						writer.Write (val.Value);
+						writer.Write (val.Value != null);
+						if (val.Value != null) {
+							writer.Write (val.Value);
+						}
 					}
 
 					writer.Write (floatValues.Count);
@@ -60,8 +73,10 @@ namespace Zenvin.ProjectPreferences {
 		}
 
 		public static void SetBool (string key, bool value) {
-			Load ();
-			boolValues[key] = value;
+			if (!string.IsNullOrWhiteSpace (key)) {
+				Load ();
+				boolValues[key] = value;
+			}
 		}
 
 
@@ -75,8 +90,10 @@ namespace Zenvin.ProjectPreferences {
 		}
 
 		public static void SetInt (string key, int value) {
-			Load ();
-			intValues[key] = value;
+			if (!string.IsNullOrWhiteSpace (key)) {
+				Load ();
+				intValues[key] = value;
+			}
 		}
 
 		public static string GetString (string key, string fallback) {
@@ -89,8 +106,10 @@ namespace Zenvin.ProjectPreferences {
 		}
 
 		public static void SetString (string key, string value) {
-			Load ();
-			stringValues[key] = value;
+			if (!string.IsNullOrWhiteSpace (key)) {
+				Load ();
+				stringValues[key] = value;
+			}
 		}
 
 		public static float GetFloat (string key, float fallback) {
@@ -103,19 +122,48 @@ namespace Zenvin.ProjectPreferences {
 		}
 
 		public static void SetFloat (string key, float value) {
-			Load ();
-			floatValues[key] = value;
+			if (!string.IsNullOrWhiteSpace (key)) {
+				Load ();
+				floatValues[key] = value;
+			}
+		}
+
+
+		public static KeyTypes HasKey (string key) {
+			if (key == null) {
+				return KeyTypes.None;
+			}
+
+			var value = KeyTypes.None;
+			if (boolValues.ContainsKey (key)) {
+				value |= KeyTypes.Bool;
+			}
+			if (intValues.ContainsKey (key)) {
+				value |= KeyTypes.Int;
+			}
+			if (stringValues.ContainsKey (key)) {
+				value |= KeyTypes.String;
+			}
+			if (floatValues.ContainsKey (key)) {
+				value |= KeyTypes.Float;
+			}
+			return value;
 		}
 
 
 		[InitializeOnLoadMethod]
-		private static void RegisterReloadCallback () {
+		private static void RegisterCallbacks () {
 			AssemblyReloadEvents.beforeAssemblyReload += OnAssemblyReload;
+			EditorApplication.quitting += OnEditorQuit;
 		}
 
 		private static void OnAssemblyReload () {
 			Save ();
 			loaded = false;
+		}
+
+		private static void OnEditorQuit () {
+			Save ();
 		}
 
 		private static void Load () {
@@ -144,7 +192,8 @@ namespace Zenvin.ProjectPreferences {
 
 					count = reader.ReadInt32 ();
 					for (int i = 0; i < count; i++) {
-						stringValues[reader.ReadString ()] = reader.ReadString ();
+						var key = reader.ReadString ();
+						stringValues[key] = reader.ReadBoolean () ? reader.ReadString () : null;
 					}
 
 					count = reader.ReadInt32 ();
