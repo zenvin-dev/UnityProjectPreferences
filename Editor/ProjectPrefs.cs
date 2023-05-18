@@ -5,26 +5,26 @@ using UnityEngine;
 using System;
 
 namespace Zenvin.ProjectPreferences {
-	public static class ProjectPrefs {
+	[InitializeOnLoad]
+	public sealed class ProjectPrefs {
 
-		[Flags]
-		public enum KeyTypes : byte {
-			None = 0,
-			Bool = 1,
-			Int = 2,
-			String = 4,
-			Float = 8,
+		public enum ValueOverrideOption {
+			DontOverride,
+			OverrideMatchingType,
+			AlwaysOverride,
 		}
 
 		private static bool loaded = false;
-		private static readonly Dictionary<string, bool> boolValues = new Dictionary<string, bool> ();
-		private static readonly Dictionary<string, int> intValues = new Dictionary<string, int> ();
-		private static readonly Dictionary<string, string> stringValues = new Dictionary<string, string> ();
-		private static readonly Dictionary<string, float> floatValues = new Dictionary<string, float> ();
+		private static readonly Dictionary<PrefKey, PrefValue> values = new Dictionary<PrefKey, PrefValue> ();
+
+
+		static ProjectPrefs () {
+			RegisterCallbacks ();
+		}
 
 
 		public static void Save () {
-			if (boolValues.Count == 0 && intValues.Count == 0 && stringValues.Count == 0 && floatValues.Count == 0) {
+			if (values.Count == 0) {
 				return;
 			}
 
@@ -32,34 +32,33 @@ namespace Zenvin.ProjectPreferences {
 
 			using (var stream = File.Create (path)) {
 				using (var writer = new BinaryWriter (stream)) {
-					writer.Write (boolValues.Count);
-					foreach (var val in boolValues) {
-						writer.Write (val.Key);
-						writer.Write (val.Value);
-					}
-
-					writer.Write (intValues.Count);
-					foreach (var val in intValues) {
-						writer.Write (val.Key);
-						writer.Write (val.Value);
-					}
-
-					writer.Write (stringValues.Count);
-					foreach (var val in stringValues) {
-						writer.Write (val.Key);
-						writer.Write (val.Value != null);
-						if (val.Value != null) {
-							writer.Write (val.Value);
-						}
-					}
-
-					writer.Write (floatValues.Count);
-					foreach (var val in floatValues) {
-						writer.Write (val.Key);
-						writer.Write (val.Value);
+					writer.Write (values.Count);
+					foreach (var val in values) {
+						val.Key.Serialize (writer);
+						PrefValue.Serialize (writer, val.Value);
 					}
 				}
 			}
+		}
+
+
+		public static bool SetValue (PrefKey key, PrefValue value) {
+			return SetValue (key, value, ValueOverrideOption.AlwaysOverride);
+		}
+
+		public static bool SetValue (PrefKey key, PrefValue value, ValueOverrideOption option) {
+			if (value == null || !key.Valid) {
+				return false;
+			}
+			if (option == ValueOverrideOption.AlwaysOverride || !values.TryGetValue (key, out PrefValue existing)) {
+				values[key] = value;
+				return true;
+			}
+			if (option == ValueOverrideOption.OverrideMatchingType && existing.Type != value.Type) {
+				return false;
+			}
+			values[key] = value;
+			return true;
 		}
 
 
@@ -67,91 +66,109 @@ namespace Zenvin.ProjectPreferences {
 			return TryGetBool (key, out bool value) ? value : fallback;
 		}
 
-		public static bool TryGetBool (string key, out bool value) {
-			Load ();
-			return boolValues.TryGetValue (key, out value);
-		}
-
-		public static void SetBool (string key, bool value) {
-			if (!string.IsNullOrWhiteSpace (key)) {
-				Load ();
-				boolValues[key] = value;
-			}
-		}
-
-
 		public static int GetInt (string key, int fallback) {
 			return TryGetInt (key, out int value) ? value : fallback;
-		}
-
-		public static bool TryGetInt (string key, out int value) {
-			Load ();
-			return intValues.TryGetValue (key, out value);
-		}
-
-		public static void SetInt (string key, int value) {
-			if (!string.IsNullOrWhiteSpace (key)) {
-				Load ();
-				intValues[key] = value;
-			}
 		}
 
 		public static string GetString (string key, string fallback) {
 			return TryGetString (key, out string value) ? value : fallback;
 		}
 
-		public static bool TryGetString (string key, out string value) {
-			Load ();
-			return stringValues.TryGetValue (key, out value);
-		}
-
-		public static void SetString (string key, string value) {
-			if (!string.IsNullOrWhiteSpace (key)) {
-				Load ();
-				stringValues[key] = value;
-			}
-		}
-
 		public static float GetFloat (string key, float fallback) {
 			return TryGetFloat (key, out float value) ? value : fallback;
 		}
 
+		public static bool TryGetBool (string key, out bool value) {
+			Load ();
+			if (values.TryGetValue (key, out PrefValue val)) {
+				value = val.BoolValue;
+				return val.Type == KeyType.Bool;
+			}
+			value = default;
+			return false;
+		}
+
+		public static bool TryGetInt (string key, out int value) {
+			Load ();
+			if (values.TryGetValue (key, out PrefValue val)) {
+				value = val.IntValue;
+				return val.Type == KeyType.Bool;
+			}
+			value = default;
+			return false;
+		}
+
+		public static bool TryGetString (string key, out string value) {
+			Load ();
+			if (values.TryGetValue (key, out PrefValue val)) {
+				value = val.StringValue;
+				return val.Type == KeyType.Bool;
+			}
+			value = default;
+			return false;
+		}
+
 		public static bool TryGetFloat (string key, out float value) {
 			Load ();
-			return floatValues.TryGetValue (key, out value);
-		}
-
-		public static void SetFloat (string key, float value) {
-			if (!string.IsNullOrWhiteSpace (key)) {
-				Load ();
-				floatValues[key] = value;
+			if (values.TryGetValue (key, out PrefValue val)) {
+				value = val.FloatValue;
+				return val.Type == KeyType.Bool;
 			}
-		}
-
-
-		public static KeyTypes HasKey (string key) {
-			if (key == null) {
-				return KeyTypes.None;
-			}
-
-			var value = KeyTypes.None;
-			if (boolValues.ContainsKey (key)) {
-				value |= KeyTypes.Bool;
-			}
-			if (intValues.ContainsKey (key)) {
-				value |= KeyTypes.Int;
-			}
-			if (stringValues.ContainsKey (key)) {
-				value |= KeyTypes.String;
-			}
-			if (floatValues.ContainsKey (key)) {
-				value |= KeyTypes.Float;
-			}
-			return value;
+			value = default;
+			return false;
 		}
 
 
-		[InitializeOnLoadMethod]
+		public static bool HasKey (PrefKey key) {
+			return values.ContainsKey (key);
+		}
+
+		public static bool HasKey (Func<PrefKey, bool> filter) {
+			foreach (var pref in values) {
+				if (filter.Invoke (pref.Key)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public static bool DeleteKey (PrefKey key) {
+			return values.Remove (key);
+		}
+
+		public static int DeleteKeys (Func<PrefKey, bool> filter) {
+			if (filter == null) {
+				return 0;
+			}
+			var list = GetKeys (filter);
+
+			for (int i = 0; i < list.Count; i++) {
+				values.Remove (list[i]);
+			}
+
+			return list.Count;
+		}
+
+		public static List<PrefKey> GetKeys (Func<PrefKey, bool> filter) {
+			if (filter == null) {
+				return null;
+			}
+
+			var list = new List<PrefKey> ();
+			foreach (var pref in values) {
+				if (filter.Invoke (pref.Key)) {
+					list.Add (pref.Key);
+				}
+			}
+			return list;
+		}
+
+		public static void DeleteAll () {
+			values.Clear ();
+			Save ();
+		}
+
+
 		private static void RegisterCallbacks () {
 			AssemblyReloadEvents.beforeAssemblyReload += OnAssemblyReload;
 			EditorApplication.quitting += OnEditorQuit;
@@ -160,6 +177,7 @@ namespace Zenvin.ProjectPreferences {
 		private static void OnAssemblyReload () {
 			Save ();
 			loaded = false;
+			Debug.Log ("Saving Project Prefs...");
 		}
 
 		private static void OnEditorQuit () {
@@ -182,23 +200,9 @@ namespace Zenvin.ProjectPreferences {
 				using (var reader = new BinaryReader (stream)) {
 					count = reader.ReadInt32 ();
 					for (int i = 0; i < count; i++) {
-						boolValues[reader.ReadString ()] = reader.ReadBoolean ();
-					}
-
-					count = reader.ReadInt32 ();
-					for (int i = 0; i < count; i++) {
-						intValues[reader.ReadString ()] = reader.ReadInt32 ();
-					}
-
-					count = reader.ReadInt32 ();
-					for (int i = 0; i < count; i++) {
-						var key = reader.ReadString ();
-						stringValues[key] = reader.ReadBoolean () ? reader.ReadString () : null;
-					}
-
-					count = reader.ReadInt32 ();
-					for (int i = 0; i < count; i++) {
-						floatValues[reader.ReadString ()] = reader.ReadSingle ();
+						if (PrefKey.TryDeserialize (reader, out PrefKey? key) && PrefValue.TryDeserialize (reader, out PrefValue value) && key.HasValue) {
+							values[key.Value] = value;
+						}
 					}
 				}
 			}
@@ -207,6 +211,5 @@ namespace Zenvin.ProjectPreferences {
 		private static string GetPrefFilePath () {
 			return Path.Combine (Application.dataPath, "../ProjectPrefs.dat");
 		}
-
 	}
 }
