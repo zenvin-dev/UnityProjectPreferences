@@ -61,24 +61,50 @@ namespace Zenvin.ProjectPreferences {
 			return true;
 		}
 
+		public static object GetValue (PrefKey key) {
+			return TryGetValue (key, out object value) ? value : null;
+		}
 
-		public static bool GetBool (string key, bool fallback) {
+		public static bool TryGetValue (PrefKey key, out object value) {
+			value = null;
+			Load ();
+			if (values.TryGetValue (key, out PrefValue val)) {
+				switch (val.Type) {
+					case KeyType.Bool:
+						value = val.BoolValue;
+						break;
+					case KeyType.Int:
+						value = val.IntValue;
+						break;
+					case KeyType.String:
+						value = val.StringValue;
+						break;
+					case KeyType.Float:
+						value = val.FloatValue;
+						break;
+				}
+				return true;
+			}
+			return false;
+		}
+
+		public static bool GetBool (PrefKey key, bool fallback) {
 			return TryGetBool (key, out bool value) ? value : fallback;
 		}
 
-		public static int GetInt (string key, int fallback) {
+		public static int GetInt (PrefKey key, int fallback) {
 			return TryGetInt (key, out int value) ? value : fallback;
 		}
 
-		public static string GetString (string key, string fallback) {
+		public static string GetString (PrefKey key, string fallback) {
 			return TryGetString (key, out string value) ? value : fallback;
 		}
 
-		public static float GetFloat (string key, float fallback) {
+		public static float GetFloat (PrefKey key, float fallback) {
 			return TryGetFloat (key, out float value) ? value : fallback;
 		}
 
-		public static bool TryGetBool (string key, out bool value) {
+		public static bool TryGetBool (PrefKey key, out bool value) {
 			Load ();
 			if (values.TryGetValue (key, out PrefValue val)) {
 				value = val.BoolValue;
@@ -88,7 +114,7 @@ namespace Zenvin.ProjectPreferences {
 			return false;
 		}
 
-		public static bool TryGetInt (string key, out int value) {
+		public static bool TryGetInt (PrefKey key, out int value) {
 			Load ();
 			if (values.TryGetValue (key, out PrefValue val)) {
 				value = val.IntValue;
@@ -98,7 +124,7 @@ namespace Zenvin.ProjectPreferences {
 			return false;
 		}
 
-		public static bool TryGetString (string key, out string value) {
+		public static bool TryGetString (PrefKey key, out string value) {
 			Load ();
 			if (values.TryGetValue (key, out PrefValue val)) {
 				value = val.StringValue;
@@ -108,7 +134,7 @@ namespace Zenvin.ProjectPreferences {
 			return false;
 		}
 
-		public static bool TryGetFloat (string key, out float value) {
+		public static bool TryGetFloat (PrefKey key, out float value) {
 			Load ();
 			if (values.TryGetValue (key, out PrefValue val)) {
 				value = val.FloatValue;
@@ -177,7 +203,6 @@ namespace Zenvin.ProjectPreferences {
 		private static void OnAssemblyReload () {
 			Save ();
 			loaded = false;
-			Debug.Log ("Saving Project Prefs...");
 		}
 
 		private static void OnEditorQuit () {
