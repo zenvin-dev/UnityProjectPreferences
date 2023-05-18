@@ -1,8 +1,8 @@
 {
-  "name": "com.zenvin.project-preferences",
+  "name": "com.zenvin.unity-project-preferences",
   "version": "1.0.0",
   "displayName": "Project Preferences",
-  "description": "Like Unity's built-in EditorPrefs, but relative to a single project.",
+  "description": "Similar to Unity's built-in EditorPrefs, but relative to a single project. Also a little more versatile.",
   "unity": "2018.3",
   "author": {
     "name": "Zenvin",
