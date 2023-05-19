@@ -42,6 +42,10 @@ namespace Zenvin.ProjectPreferences {
 		}
 
 
+		public override string ToString () {
+			return $"{Namespace}#{Block}#{Key}";
+		}
+
 		public static implicit operator PrefKey (string key) {
 			return new PrefKey (key);
 		}

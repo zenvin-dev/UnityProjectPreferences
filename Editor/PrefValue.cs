@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using UnityEngine;
+using System.IO;
+using System;
 
 namespace Zenvin.ProjectPreferences {
 	public class PrefValue {
@@ -87,6 +89,40 @@ namespace Zenvin.ProjectPreferences {
 			return true;
 		}
 
+
+		public override string ToString () {
+			switch (Type) {
+				case KeyType.Bool:
+					return BoolValue.ToString ();
+				case KeyType.Int:
+					return IntValue.ToString ();
+				case KeyType.String:
+					return StringValue;
+				case KeyType.Float:
+					return FloatValue.ToString ();
+				default:
+					return "<NONE>";
+			}
+		}
+
+		public static bool TryCreate (object input, out PrefValue value) {
+			switch (input) {
+				case bool @bool:
+					value = new PrefValue (@bool);
+					return true;
+				case int @int:
+					value = new PrefValue (@int);
+					return true;
+				case string @string:
+					value = new PrefValue (@string);
+					return true;
+				case float @float:
+					value = new PrefValue (@float);
+					return true;
+			}
+			value = null;
+			return false;
+		}
 
 		public static implicit operator PrefValue (bool value) {
 			return new PrefValue (value);
