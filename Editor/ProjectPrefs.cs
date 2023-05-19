@@ -17,12 +17,17 @@ namespace Zenvin.ProjectPreferences {
 		private static bool loaded = false;
 		private static readonly Dictionary<PrefKey, PrefValue> values = new Dictionary<PrefKey, PrefValue> ();
 
+		/// <summary> The number of preference keys. </summary>
+		public static int Count => values.Count;
+
 
 		static ProjectPrefs () {
 			RegisterCallbacks ();
 		}
 
-
+		/// <summary>
+		/// Write all current keys and their values to the preferences file.
+		/// </summary>
 		public static void Save () {
 			if (values.Count == 0) {
 				return;
@@ -38,6 +43,20 @@ namespace Zenvin.ProjectPreferences {
 						PrefValue.Serialize (writer, val.Value);
 					}
 				}
+			}
+		}
+
+		internal static void Reload () {
+			if (loaded) {
+				values.Clear ();
+				loaded = false;
+			}
+			Load ();
+		}
+
+		internal static IEnumerator<KeyValuePair<PrefKey, PrefValue>> GetPreferenceEnumerator () {
+			foreach (var kvp in values) {
+				yield return kvp;
 			}
 		}
 
