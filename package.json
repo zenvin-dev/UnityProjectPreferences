@@ -11,5 +11,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/xZenvin/UnityProjectPreferences"
+  },
+  "dependencies": {
+	"com.zenvin.unity-editor-utility": "https://xZenvin/UnityEditorUtility"
   }
 }

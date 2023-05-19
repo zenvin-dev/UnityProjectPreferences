@@ -1,7 +1,9 @@
 {
     "name": "Zenvin.ProjectPreferences",
     "rootNamespace": "Zenvin.ProjectPreferences",
-    "references": [],
+    "references": [
+        "GUID:43e07366a3b322442ab7e131ca368d69"
+    ],
     "includePlatforms": [
         "Editor"
     ],
