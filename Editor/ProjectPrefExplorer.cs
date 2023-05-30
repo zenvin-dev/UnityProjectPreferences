@@ -75,7 +75,7 @@ namespace Zenvin.ProjectPreferences {
 			var txt = val.ToString ();
 
 			var hasQuery = !string.IsNullOrEmpty (search);
-			var query = search.ToUpper ();
+			var query = search?.ToUpper ();
 			var keyNamespaceMatch = !hasQuery || (key.Namespace?.ToUpper()?.Contains (query) ?? false);
 			var keyBlockMatch = !hasQuery || (key.Block?.ToUpper()?.Contains (query) ?? false);
 			var keyKeyMatch = !hasQuery || (key.Key?.ToUpper()?.Contains (query) ?? false);
