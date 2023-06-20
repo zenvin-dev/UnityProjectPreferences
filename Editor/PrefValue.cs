@@ -119,6 +119,9 @@ namespace Zenvin.ProjectPreferences {
 				case float @float:
 					value = new PrefValue (@float);
 					return true;
+				case null:
+					value = new PrefValue ("");
+					return true;
 			}
 			value = null;
 			return false;
